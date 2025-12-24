@@ -1,0 +1,19 @@
+# Python environment
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Telethon Sessions (Sensitive Data)
+*.session
+*.session-journal
+
+# Rendered Outputs
+temp_rendered/
+downloads/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db

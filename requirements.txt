@@ -1,0 +1,5 @@
+telethon
+pillow
+jdatetime
+arabic-reshaper
+python-bidi
