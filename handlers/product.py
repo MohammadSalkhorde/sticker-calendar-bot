@@ -1,22 +1,26 @@
 from telethon import events
-from config import PRODUCTS, CARD_NUMBER
 from database.order_repo import create_order
-from database.user_repo import set_state
+from database.settings_repo import get_products, get_payment_info
 from enums import UserState
+from database.user_repo import set_state
 
 def register(bot):
-
-    @bot.on(events.CallbackQuery(data=b"pack1"))
-    @bot.on(events.CallbackQuery(data=b"pack2"))
-    async def product(event):
-        pack = event.data.decode()
-        price = PRODUCTS[pack]["price"]
-
-        create_order(event.sender_id, pack)
-        set_state(event.sender_id, UserState.WAITING_RECEIPT)
-
-        await event.edit(
-            f"💳 مبلغ: {price:,} تومان\n"
-            f"شماره کارت:\n{CARD_NUMBER}\n\n"
-            "بعد از پرداخت عکس رسید رو بفرست"
-        )
+    @bot.on(events.CallbackQuery)
+    async def product_click(event):
+        data = event.data.decode()
+        products = await get_products()
+        card_num, card_name = await get_payment_info()
+        
+        if data in products:
+            selected = products[data]
+            await create_order(event.sender_id, data)
+            await set_state(event.sender_id, UserState.WAITING_RECEIPT)
+            
+            caption = (
+                f"✅ پکیج انتخاب شده: **{selected['name']}**\n\n"
+                f"💰 مبلغ قابل پرداخت: **{selected['price']:,} تومان**\n"
+                f"💳 شماره کارت: `{card_num}`\n"
+                f"👤 بنام: **{card_name}**\n\n"
+                "لطفاً پس از واریز، تصویر فیش را ارسال کنید."
+            )
+            await event.respond(caption)

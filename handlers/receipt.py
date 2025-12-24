@@ -1,67 +1,46 @@
 from telethon import events, Button
 from enums import UserState
-from database.user_repo import get_user, set_state
-from database.order_repo import get_active_order, update_order
+from database.user_repo import get_state, set_state
+from database.order_repo import update_order
 from config import ADMIN_ID
-from telethon.tl.types import InputPeerUser
 
 def register(bot):
+    # این هندلر فقط زمانی کار می‌کند که کاربر عکسی بفرستد
     @bot.on(events.NewMessage)
-    async def receipt(event):
-        user = get_user(event.sender_id)
-        if not user or user["state"] != UserState.WAITING_RECEIPT:
+    async def receipt_handler(event):
+        # 1. بررسی وضعیت کاربر (فقط اگر منتظر فیش بودیم)
+        user_id = event.sender_id
+        state = await get_state(user_id)
+        
+        if state != UserState.WAITING_RECEIPT:
             return
 
+        # 2. بررسی اینکه آیا فایل ارسالی حتماً عکس است یا خیر
         if not event.photo:
-            await event.reply("❌ فقط عکس رسید ارسال کن")
+            await event.respond("❌ لطفاً فقط تصویر (عکس) فیش واریزی خود را ارسال کنید.")
             return
 
-        file_path = await event.download_media()
-        update_order(event.sender_id, {"receipt": file_path, "status": "WAITING_ADMIN"}) 
-        set_state(event.sender_id, UserState.CONFIRM_RECEIPT)
-        await event.reply(
-            "آیا از ارسال رسید به پشتیبانی اطمینان دارید؟",
-            buttons=[
-                [
-                    Button.inline("✅ تایید", f"send_admin_{event.sender_id}"),
-                    Button.inline("❌ لغو", f"cancel_send_{event.sender_id}")
-                ]
-            ]
+        # 3. تغییر وضعیت کاربر در دیتابیس (برای جلوگیری از ارسال مجدد)
+        await set_state(user_id, UserState.WAITING_ADMIN)
+        
+        # 4. آپدیت وضعیت سفارش در دیتابیس
+        await update_order(user_id, {"status": "WAITING_CONFIRM"})
+
+        # 5. اطلاع‌رسانی به کاربر
+        await event.respond(
+            "✅ فیش شما دریافت شد.\n"
+            "مدیریت در حال بررسی است. پس از تأیید، استیکر شما ساخته و ارسال خواهد شد."
         )
 
-    @bot.on(events.CallbackQuery)
-    async def cancel_send(event):
-        data = event.data.decode()
-        if not data.startswith("cancel_send_"):
-            return
-
-        user_id = int(data.split("_")[2])
-        set_state(user_id, UserState.WAITING_RECEIPT)
-        await event.edit("❌ ارسال رسید لغو شد. لطفا دوباره عکس ارسال کنید.")
-
-    @bot.on(events.CallbackQuery)
-    async def send_admin(event):
-        data = event.data.decode()
-        if not data.startswith("send_admin_"):
-            return
-
-        user_id = int(data.split("_")[2])
-        order = get_active_order(user_id)
-        if not order or "receipt" not in order:
-            await event.edit("❌ رسید پیدا نشد")
-            return
-
-        await bot.send_file(
+        # 6. فوروارد فیش برای ادمین همراه با دکمه‌های تأیید و رد
+        await bot.send_message(
             ADMIN_ID,
-            order["receipt"],
-            caption=f"🧾 رسید کاربر: {user_id}",
+            f"💰 **فیش واریزی جدید**\n\n"
+            f"👤 کاربر: `{user_id}`\n"
+            f"🆔 نام کاربری: @{(await event.get_sender()).username or 'بدون آیدی'}",
+            file=event.photo,
             buttons=[
-                [
-                    Button.inline(f"✅ تایید پرداخت {user_id}", f"confirm_{user_id}"),
-                    Button.inline(f"❌ لغو پرداخت {user_id}", f"cancel_{user_id}")
-                ]
+                [Button.inline("✅ تأیید و ساخت استیکر", f"confirm_{user_id}")],
+                [Button.inline("❌ رد فیش و لغو", f"cancel_{user_id}")]
             ]
         )
-
-        set_state(user_id, UserState.WAITING_ADMIN)
-        await event.edit("رسید برای پشتیبانی ارسال شد")
