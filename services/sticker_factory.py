@@ -8,9 +8,8 @@ def get_persian_text(text):
     reshaped = arabic_reshaper.reshape(str(text))
     return get_display(reshaped)
 
-def build_calendar_stickers(template_path, pack_type=1):
+def build_calendar_stickers(template_path, sticker_name, sticker_id, pack_type=1):
     rendered_images = []
-    # مسیر فونت را حتما چک کنید
     font_path = r"C:\Users\surface laptop\Desktop\python\projects\assets\fonts\Vazirmatn-Bold.ttf"
     
     output_dir = "temp_rendered"
@@ -21,13 +20,11 @@ def build_calendar_stickers(template_path, pack_type=1):
     en_weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     fa_months = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"]
 
-    # دریافت تاریخ فعلی شمسی
     now = jdatetime.datetime.now()
     current_year = now.year
     current_month = now.month
     month_name = fa_months[current_month - 1]
     
-    # محاسبه تعداد روزهای ماه
     if current_month <= 6:
         days_in_month = 31
     elif current_month <= 11:
@@ -41,70 +38,56 @@ def build_calendar_stickers(template_path, pack_type=1):
             weekday_index = shamsi_date.weekday()
             miladi_date = shamsi_date.togregorian()
             miladi_day = miladi_date.strftime("%d")
-            miladi_month_name = miladi_date.strftime("%b")
-            miladi_year = miladi_date.year
+            miladi_month_name = miladi_date.strftime("%b").upper()
 
-            # باز کردن قالب
             img = Image.open(template_path).convert("RGBA")
             img = img.resize((512, 512), Image.Resampling.LANCZOS)
             draw = ImageDraw.Draw(img)
 
-            if not os.path.exists(font_path):
-                raise FileNotFoundError(f"فونت در مسیر {font_path} یافت نشد!")
+            cx = 256 
 
             if pack_type == 1:
-                # --- چیدمان متمرکز در دایره (پک 1) ---
-                f_main = ImageFont.truetype(font_path, 85)
-                f_sub = ImageFont.truetype(font_path, 32)
-                cx, cy = 256, 256
-                
-                draw.text((cx + 55, cy - 85), get_persian_text(fa_weekdays[weekday_index]), font=f_sub, fill=(50, 50, 50), anchor="mm")
-                draw.text((cx - 55, cy - 85), en_weekdays[weekday_index], font=f_sub, fill=(50, 50, 50), anchor="mm")
-                draw.text((cx, cy - 50), get_persian_text(f"{current_year} - {miladi_year}"), font=f_sub, fill=(100, 100, 100), anchor="mm")
-                draw.text((cx + 65, cy), get_persian_text(month_name), font=f_sub, fill=(0, 0, 0), anchor="mm")
-                draw.text((cx - 65, cy), miladi_month_name, font=f_sub, fill=(0, 0, 0), anchor="mm")
-                draw.text((cx + 65, cy + 70), get_persian_text(day), font=f_main, fill=(139, 43, 22), anchor="mm")
-                draw.text((cx - 65, cy + 70), miladi_day, font=f_main, fill=(139, 43, 22), anchor="mm")
+                # --- چیدمان پک ۱ (دایره‌ای) ---
+                f_brand = ImageFont.truetype(font_path, 34)    
+                f_weekday = ImageFont.truetype(font_path, 28)  
+                f_day_num = ImageFont.truetype(font_path, 95)   
+                f_month_fa = ImageFont.truetype(font_path, 42)  
+                f_month_en = ImageFont.truetype(font_path, 24)  
+                f_id = ImageFont.truetype(font_path, 32)        
+                draw.text((cx, 135), get_persian_text(sticker_name), font=f_brand, fill=(40, 40, 40), anchor="mm")
+                draw.text((cx, 180), get_persian_text(fa_weekdays[weekday_index]), font=f_weekday, fill=(60, 60, 60), anchor="mm")
+                draw.text((cx, 255), get_persian_text(day), font=f_day_num, fill=(180, 40, 40), anchor="mm")
+                draw.text((cx, 325), get_persian_text(month_name), font=f_month_fa, fill=(0, 0, 0), anchor="mm")
+                draw.text((cx, 370), f"{miladi_month_name} {miladi_day}", font=f_month_en, fill=(80, 80, 80), anchor="mm")
+                draw.text((cx, 465), sticker_id.lower(), font=f_id, fill=(0, 0, 0), anchor="mm")
 
             else:
-                # --- چیدمان جدول‌بندی شده و ستونی (پک 2) ---
-                # تنظیم سایز فونت‌ها برای جلوگیری از تداخل
-                f_day = ImageFont.truetype(font_path, 90)    # عدد روز
-                f_month = ImageFont.truetype(font_path, 38)  # نام ماه
-                f_header = ImageFont.truetype(font_path, 28) # روز هفته و سال (سایز کوچک‌تر شد)
-                
-                # تعریف ستون‌های مجازی برای تراز دقیق (عرض کل 512 است)
-                col_right = 395  # مرکز بخش راست (فارسی)
-                col_center = 256 # مرکز کل تصویر (سال‌ها)
-                col_left = 117   # مرکز بخش چپ (انگلیسی)
-                
-                # --- ردیف هدر (بخش رنگی بالای تقویم) ---
-                # روز هفته فارسی
-                draw.text((col_right, 50), get_persian_text(fa_weekdays[weekday_index]), font=f_header, fill="white", anchor="mm")
-                # سال‌ها (زیر هم در مرکز)
-                draw.text((col_center, 40), get_persian_text(str(current_year)), font=f_header, fill="white", anchor="mm")
-                draw.text((col_center, 78), str(miladi_year), font=f_header, fill="white", anchor="mm")
-                # روز هفته انگلیسی
-                draw.text((col_left, 50), en_weekdays[weekday_index], font=f_header, fill="white", anchor="mm")
-                
-                # --- بخش بدنه (بخش سفید پایین تقویم) ---
-                y_month = 345 # ارتفاع نام ماه
-                y_day = 430   # ارتفاع عدد روز
-                
-                # ستون راست: شمسی
-                draw.text((col_right, y_month), get_persian_text(month_name), font=f_month, fill=(0, 0, 0), anchor="mm")
-                draw.text((col_right, y_day), get_persian_text(day), font=f_day, fill=(139, 43, 22), anchor="mm")
-                
-                # ستون چپ: میلادی
-                draw.text((col_left, y_month), miladi_month_name, font=f_month, fill=(0, 0, 0), anchor="mm")
-                draw.text((col_left, y_day), miladi_day, font=f_day, fill=(139, 43, 22), anchor="mm")
+                # --- چیدمان پک ۲ (تقویم مستطیلی دیواری) ---
+                f_brand_p2 = ImageFont.truetype(font_path, 38)
+                f_medium_p2 = ImageFont.truetype(font_path, 32)
+                f_id_p2 = ImageFont.truetype(font_path, 38)
 
-            # ذخیره فایل نهایی
+                # ۱. نام برند (مرکز نوار آبی بالا)
+                draw.text((cx, 125), get_persian_text(sticker_name), font=f_brand_p2, fill=(255, 255, 255), anchor="mm")
+
+                # ۲. ردیف دوم (روز هفته): مرکزیت سطر ۲
+                draw.text((365, 235), get_persian_text(fa_weekdays[weekday_index]), font=f_medium_p2, fill=(0, 0, 0), anchor="mm")
+                draw.text((145, 235), en_weekdays[weekday_index], font=f_medium_p2, fill=(60, 60, 60), anchor="mm")
+
+                # ۳. ردیف سوم (تاریخ): انتقال به ستون ۳ (پایین‌تر)
+                shamsi_text = f"{day} {month_name}"
+                miladi_text = f"{miladi_month_name} {miladi_day}"
+                draw.text((365, 315), get_persian_text(shamsi_text), font=f_medium_p2, fill=(180, 40, 40), anchor="mm")
+                draw.text((145, 315), miladi_text, font=f_medium_p2, fill=(0, 0, 0), anchor="mm")
+
+                # ۴. ردیف آخر (آیدی): کمی بالاتر برای عدم برخورد با خط پایین
+                draw.text((cx, 415), sticker_id.lower(), font=f_id_p2, fill=(0, 0, 0), anchor="mm")
+
             save_path = os.path.join(output_dir, f"final_{day}.png")
             img.save(save_path)
             rendered_images.append(save_path)
             
         except Exception as e:
-            print(f"❌ خطا در رندر روز {day}: {e}")
+            print(f"❌ خطا در روز {day}: {e}")
 
     return rendered_images

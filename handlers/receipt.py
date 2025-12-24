@@ -1,46 +1,85 @@
 from telethon import events, Button
 from enums import UserState
-from database.user_repo import get_state, set_state
-from database.order_repo import update_order
+from database.user_repo import set_state, get_state
+from database.order_repo import get_active_order
 from config import ADMIN_ID
 
 def register(bot):
-    # این هندلر فقط زمانی کار می‌کند که کاربر عکسی بفرستد
-    @bot.on(events.NewMessage)
+    # مرحله اول: دریافت فیش از کاربر
+    @bot.on(events.NewMessage(func=lambda e: e.photo))
     async def receipt_handler(event):
-        # 1. بررسی وضعیت کاربر (فقط اگر منتظر فیش بودیم)
-        user_id = event.sender_id
-        state = await get_state(user_id)
-        
-        if state != UserState.WAITING_RECEIPT:
-            return
-
-        # 2. بررسی اینکه آیا فایل ارسالی حتماً عکس است یا خیر
-        if not event.photo:
-            await event.respond("❌ لطفاً فقط تصویر (عکس) فیش واریزی خود را ارسال کنید.")
-            return
-
-        # 3. تغییر وضعیت کاربر در دیتابیس (برای جلوگیری از ارسال مجدد)
-        await set_state(user_id, UserState.WAITING_ADMIN)
-        
-        # 4. آپدیت وضعیت سفارش در دیتابیس
-        await update_order(user_id, {"status": "WAITING_CONFIRM"})
-
-        # 5. اطلاع‌رسانی به کاربر
-        await event.respond(
-            "✅ فیش شما دریافت شد.\n"
-            "مدیریت در حال بررسی است. پس از تأیید، استیکر شما ساخته و ارسال خواهد شد."
-        )
-
-        # 6. فوروارد فیش برای ادمین همراه با دکمه‌های تأیید و رد
-        await bot.send_message(
-            ADMIN_ID,
-            f"💰 **فیش واریزی جدید**\n\n"
-            f"👤 کاربر: `{user_id}`\n"
-            f"🆔 نام کاربری: @{(await event.get_sender()).username or 'بدون آیدی'}",
-            file=event.photo,
-            buttons=[
-                [Button.inline("✅ تأیید و ساخت استیکر", f"confirm_{user_id}")],
-                [Button.inline("❌ رد فیش و لغو", f"cancel_{user_id}")]
+        state = await get_state(event.sender_id)
+        if state == UserState.WAITING_RECEIPT:
+            # ذخیره موقت آیدی پیام حاوی عکس
+            await set_state(event.sender_id, f"CONFIRM_RECEIPT_{event.message.id}")
+            
+            buttons = [
+                [Button.inline("✅ بله، مطمئنم و ارسال شود", data="final_confirm_receipt")],
+                [Button.inline("❌ خیر، ارسال نشود", data="cancel_receipt")]
             ]
-        )
+            
+            await event.respond(
+                "📸 **تصویر فیش شما دریافت شد.**\n"
+                "آیا از صحت تصویر و مبلغ واریزی اطمینان دارید؟ در صورت تایید، فیش برای مدیریت ارسال خواهد شد.",
+                buttons=buttons
+            )
+
+    # مرحله دوم: پردازش دکمه تایید و ارسال عکس به همراه کپشن برای ادمین
+    @bot.on(events.CallbackQuery)
+    async def receipt_callback(event):
+        data = event.data.decode()
+        state = await get_state(event.sender_id)
+
+        if data == "final_confirm_receipt" and str(state).startswith("CONFIRM_RECEIPT_"):
+            try:
+                msg_id = int(state.split("_")[-1])
+                
+                # --- بخش اصلاح شده برای رفع ارور TypeError ---
+                # دریافت آبجکت کامل پیام از تلگرام با استفاده از ID ذخیره شده
+                source_msg = await event.client.get_messages(event.chat_id, ids=msg_id)
+                
+                if not source_msg or not source_msg.photo:
+                    await event.respond("❌ خطایی رخ داد: عکس فیش یافت نشد. لطفاً دوباره ارسال کنید.")
+                    return
+                # ----------------------------------------------
+
+                # دریافت اطلاعات سفارش کاربر از دیتابیس
+                order = await get_active_order(event.sender_id)
+                sticker_name = order.get('sticker_name', 'نامشخص')
+                sticker_id = order.get('sticker_id', 'نامشخص')
+                pack_name = order.get('pack', 'نامشخص')
+
+                # آماده‌سازی متن کپشن
+                admin_caption = (
+                    f"👤 **فیش جدید واریزی دریافت شد!**\n\n"
+                    f"🆔 آیدی عددی: `{event.sender_id}`\n"
+                    f"🏷 نام درخواستی: **{sticker_name}**\n"
+                    f"🔗 آیدی درخواستی: **{sticker_id}**\n"
+                    f"📦 پکیج انتخاب شده: **{pack_name}**\n"
+                    f"➖➖➖➖➖➖➖➖"
+                )
+                
+                buttons = [
+                    [Button.inline("✅ تایید و ساخت استیکر", data=f"confirm_{event.sender_id}")],
+                    [Button.inline("❌ رد فیش", data=f"cancel_{event.sender_id}")]
+                ]
+
+                # ارسال عکس با استفاده از آبجکت پیام (photo) به همراه متن و دکمه
+                await event.client.send_file(
+                    ADMIN_ID,
+                    file=source_msg.photo, # استفاده از مدیا به جای ID عددی
+                    caption=admin_caption,
+                    buttons=buttons
+                )
+                
+                # تغییر وضعیت کاربر و اطلاع‌رسانی
+                await set_state(event.sender_id, UserState.WAITING_APPROVAL)
+                await event.edit("🚀 **فیش شما با موفقیت برای مدیریت ارسال شد.**\nمنتظر تایید و ساخت استیکر بمانید.")
+
+            except Exception as e:
+                print(f"Error in receipt_callback: {e}")
+                await event.respond("❌ خطایی در ارسال فیش رخ داد. لطفاً دوباره تلاش کنید.")
+
+        elif data == "cancel_receipt":
+            await set_state(event.sender_id, UserState.WAITING_RECEIPT)
+            await event.edit("❌ ارسال فیش لغو شد. می‌توانید تصویر جدیدی ارسال کنید.")
