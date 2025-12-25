@@ -1,62 +1,96 @@
 # 📅 Telegram Calendar Sticker Bot
 
-A professional, high-performance Telegram bot built with **Telethon** and **Pillow (PIL)**. This bot automates the creation of personalized calendar stickers for the Persian (Jalali) months, allowing users to brand their own stickers.
+[![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Framework](https://img.shields.io/badge/framework-Telethon-orange.svg)](https://github.com/LonamiWebs/Telethon)
+[![Database](https://img.shields.io/badge/database-MongoDB-green.svg)](https://www.mongodb.com/)
+[![License](https://img.shields.io/badge/license-MIT-success.svg)](LICENSE)
 
-## ✨ Features
+A **fully-automated Telegram bot** for generating **professional Persian (Jalali) calendar sticker packs**.  
+Designed for businesses and creators who want **custom-branded Telegram stickers** with payment verification and admin control.
 
-- **Automated Sticker Generation**: Creates a full set of 30/31 high-quality stickers for the current month in seconds.
-- **Multiple Design Packs**:
-  - **Pack 1 (Modern Circle)**: Minimalist circular design for a sleek, modern look.
-  - **Pack 2 (Wall Calendar)**: Classic rectangular layout with dual-language support (Persian & English).
-- **Advanced State Machine**: Handles user flow smoothly (Brand Name -> ID Collection -> Receipt Upload).
-- **Admin Dashboard**: Verification system for payment receipts. Admins can approve or reject orders with inline buttons.
-- **RTL Support**: Flawless Persian/Arabic text rendering using `arabic-reshaper` and `python-bidi`.
+---
+
+## ✨ Overview
+
+This bot allows users to:
+1. Choose a sticker design pack  
+2. Upload a payment receipt  
+3. Get admin approval  
+4. Automatically receive a **full Telegram sticker pack (1–30/31 days)**  
+
+All stickers are **generated dynamically**, rendered with perfect Persian typography, and uploaded as **real Telegram sticker packs** using MTProto.
+
+---
+
+## 🌟 Key Features
+
+### 🚀 Automation
+- Generates **complete monthly sticker packs** in one click
+- No manual upload or editing required
+
+### 🎨 Sticker Packs
+- **Pack 1 – Modern Circle**  
+  Minimal, clean circular design for modern branding
+- **Pack 2 – Wall Calendar**  
+  Classic calendar-style layout with date focus
+
+### 🧠 Smart User State Machine
+User flow is strictly controlled:
+
+### 🛡️ Admin Panel
+- Admin receives payment receipts
+- Approve ❌ / Confirm ✅ via inline buttons
+- Sticker pack is created only after approval
+
+### ✍️ Perfect Persian Typography
+- RTL text rendering
+- Proper Persian digit shaping
+- Powered by:
+  - `arabic-reshaper`
+  - `python-bidi`
+
+---
 
 ## 🛠 Tech Stack
 
-- **Core**: Python 3.12+
-- **API**: [Telethon](https://github.com/LonamiWebs/Telethon) (MTProto)
-- **Image Processing**: [Pillow](https://python-pillow.org/)
-- **Date Management**: [jdatetime](https://github.com/slashmili/python-jdatetime)
-- **Text Rendering**: `arabic-reshaper` & `python-bidi`
+| Layer | Technology |
+|------|-----------|
+| Language | Python 3.12+ |
+| Telegram API | Telethon (Bot API + MTProto) |
+| Image Processing | Pillow (PIL) |
+| Calendar | jdatetime (Jalali) |
+| Typography | arabic-reshaper, python-bidi |
+| Database | MongoDB |
 
-## 🚀 Installation
+---
 
-1. **Clone the Project**:
-   ```bash
-   git clone [https://github.com/yourusername/sticker-calendar-bot.git](https://github.com/yourusername/sticker-calendar-bot.git)
-   cd sticker-calendar-bot
-Install Requirements:
+## 📂 Project Structure
 
-Bash
-
-pip install -r requirements.txt
-Configuration: Create a config.py file:
-
-Python
-
-API_ID = 'your_api_id'
-API_HASH = 'your_api_hash'
-BOT_TOKEN = 'your_bot_token'
-ADMIN_ID = 12345678 # Your Telegram User ID
-Run the Bot:
-
-Bash
-
-python main.py
-📂 Project Structure
-main.py: Entry point of the application.
-
-handlers/: Contains bot conversation logic and receipt handling.
-
-sticker_factory.py: The engine for rendering and positioning text on images.
-
-database/: Repository logic for user states and orders.
-
-assets/: Templates and fonts.
-
-⚠️ Security Note
-Ensure that your *.session files and config.py are NEVER uploaded to public repositories. These files contain sensitive credentials.
-
-📜 License
-Distributed under the MIT License. See LICENSE for more information.
+```text
+project/
+│
+├── assets/                  # PNG templates & fonts
+│   ├── pack1/
+│   └── pack2/
+│
+├── database/
+│   ├── mongo.py              # MongoDB connection
+│   ├── user_repo.py          # User state management
+│   └── order_repo.py         # Orders & receipts
+│
+├── handlers/
+│   ├── start.py              # /start command
+│   ├── product.py            # Pack selection
+│   ├── receipt.py            # Receipt upload & confirmation
+│   └── admin.py              # Admin approval & sticker creation
+│
+├── services/
+│   ├── sticker_factory.py    # Calendar image generation
+│   ├── image_renderer.py     # Text rendering on images
+│   └── telegram_sticker_pack.py # MTProto sticker pack creator
+│
+├── bot.py                    # Application entry point
+├── config.py                 # Credentials & settings (PRIVATE)
+├── enums.py                  # User state enums
+├── requirements.txt          # Dependencies
+└── README.md

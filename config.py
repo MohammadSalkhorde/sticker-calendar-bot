@@ -3,9 +3,9 @@ from telethon.network.connection.tcpmtproxy import ConnectionTcpMTProxyAbridged
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-API_ID = 2952632
-API_HASH = "f471be4609e8ad788bffc6aaa8648942"
-BOT_TOKEN = "8405171144:AAF18BIJ-h_zZ7jj6w_5yeFjNsrpn8qubFc"
+API_ID = 111111
+API_HASH = "YOUR_API_HASH"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 
 ADMIN_ID = 6802129018
 CARD_NUMBER = "1234-5678-9012-3456"
