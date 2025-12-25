@@ -47,7 +47,6 @@ def build_calendar_stickers(template_path, sticker_name, sticker_id, pack_type=1
             cx = 256 
 
             if pack_type == 1:
-                # --- چیدمان پک ۱ (دایره‌ای) ---
                 f_brand = ImageFont.truetype(font_path, 34)    
                 f_weekday = ImageFont.truetype(font_path, 28)  
                 f_day_num = ImageFont.truetype(font_path, 95)   
@@ -62,25 +61,20 @@ def build_calendar_stickers(template_path, sticker_name, sticker_id, pack_type=1
                 draw.text((cx, 465), sticker_id.lower(), font=f_id, fill=(0, 0, 0), anchor="mm")
 
             else:
-                # --- چیدمان پک ۲ (تقویم مستطیلی دیواری) ---
                 f_brand_p2 = ImageFont.truetype(font_path, 38)
                 f_medium_p2 = ImageFont.truetype(font_path, 32)
                 f_id_p2 = ImageFont.truetype(font_path, 38)
 
-                # ۱. نام برند (مرکز نوار آبی بالا)
                 draw.text((cx, 125), get_persian_text(sticker_name), font=f_brand_p2, fill=(255, 255, 255), anchor="mm")
 
-                # ۲. ردیف دوم (روز هفته): مرکزیت سطر ۲
                 draw.text((365, 235), get_persian_text(fa_weekdays[weekday_index]), font=f_medium_p2, fill=(0, 0, 0), anchor="mm")
                 draw.text((145, 235), en_weekdays[weekday_index], font=f_medium_p2, fill=(60, 60, 60), anchor="mm")
 
-                # ۳. ردیف سوم (تاریخ): انتقال به ستون ۳ (پایین‌تر)
                 shamsi_text = f"{day} {month_name}"
                 miladi_text = f"{miladi_month_name} {miladi_day}"
                 draw.text((365, 315), get_persian_text(shamsi_text), font=f_medium_p2, fill=(180, 40, 40), anchor="mm")
                 draw.text((145, 315), miladi_text, font=f_medium_p2, fill=(0, 0, 0), anchor="mm")
 
-                # ۴. ردیف آخر (آیدی): کمی بالاتر برای عدم برخورد با خط پایین
                 draw.text((cx, 415), sticker_id.lower(), font=f_id_p2, fill=(0, 0, 0), anchor="mm")
 
             save_path = os.path.join(output_dir, f"final_{day}.png")

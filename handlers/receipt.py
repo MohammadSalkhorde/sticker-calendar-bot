@@ -5,12 +5,10 @@ from database.order_repo import get_active_order
 from config import ADMIN_ID
 
 def register(bot):
-    # مرحله اول: دریافت فیش از کاربر
     @bot.on(events.NewMessage(func=lambda e: e.photo))
     async def receipt_handler(event):
         state = await get_state(event.sender_id)
         if state == UserState.WAITING_RECEIPT:
-            # ذخیره موقت آیدی پیام حاوی عکس
             await set_state(event.sender_id, f"CONFIRM_RECEIPT_{event.message.id}")
             
             buttons = [
@@ -24,7 +22,6 @@ def register(bot):
                 buttons=buttons
             )
 
-    # مرحله دوم: پردازش دکمه تایید و ارسال عکس به همراه کپشن برای ادمین
     @bot.on(events.CallbackQuery)
     async def receipt_callback(event):
         data = event.data.decode()
@@ -34,22 +31,17 @@ def register(bot):
             try:
                 msg_id = int(state.split("_")[-1])
                 
-                # --- بخش اصلاح شده برای رفع ارور TypeError ---
-                # دریافت آبجکت کامل پیام از تلگرام با استفاده از ID ذخیره شده
                 source_msg = await event.client.get_messages(event.chat_id, ids=msg_id)
                 
                 if not source_msg or not source_msg.photo:
                     await event.respond("❌ خطایی رخ داد: عکس فیش یافت نشد. لطفاً دوباره ارسال کنید.")
                     return
-                # ----------------------------------------------
 
-                # دریافت اطلاعات سفارش کاربر از دیتابیس
                 order = await get_active_order(event.sender_id)
                 sticker_name = order.get('sticker_name', 'نامشخص')
                 sticker_id = order.get('sticker_id', 'نامشخص')
                 pack_name = order.get('pack', 'نامشخص')
 
-                # آماده‌سازی متن کپشن
                 admin_caption = (
                     f"👤 **فیش جدید واریزی دریافت شد!**\n\n"
                     f"🆔 آیدی عددی: `{event.sender_id}`\n"
@@ -64,15 +56,13 @@ def register(bot):
                     [Button.inline("❌ رد فیش", data=f"cancel_{event.sender_id}")]
                 ]
 
-                # ارسال عکس با استفاده از آبجکت پیام (photo) به همراه متن و دکمه
                 await event.client.send_file(
                     ADMIN_ID,
-                    file=source_msg.photo, # استفاده از مدیا به جای ID عددی
+                    file=source_msg.photo, 
                     caption=admin_caption,
                     buttons=buttons
                 )
                 
-                # تغییر وضعیت کاربر و اطلاع‌رسانی
                 await set_state(event.sender_id, UserState.WAITING_APPROVAL)
                 await event.edit("🚀 **فیش شما با موفقیت برای مدیریت ارسال شد.**\nمنتظر تایید و ساخت استیکر بمانید.")
 

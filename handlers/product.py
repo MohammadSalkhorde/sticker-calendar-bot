@@ -6,7 +6,6 @@ from database.user_repo import set_state, get_state
 from enums import UserState
 
 def register(bot):
-    # ۱. نمایش لیست پکیج‌ها
     @bot.on(events.NewMessage(pattern="🎨 ساخت استیکر"))
     async def show_packs(event):
         products = await get_products()
@@ -27,13 +26,10 @@ def register(bot):
             else:
                 await event.respond(f"⚠️ عکس قالب پیدا نشد!\n\n{caption}", buttons=buttons)
 
-    # ۲. مرحله شروع دریافت اطلاعات (بعد از کلیک روی انتخاب پک)
     @bot.on(events.CallbackQuery(pattern=r"select_"))
     async def start_info_collection(event):
         p_id = event.data.decode().split("_")[1]
-        # ایجاد سفارش اولیه
         await create_order(event.sender_id, p_id)
-        # تغییر وضعیت به انتظار برای دریافت نام
         await set_state(event.sender_id, UserState.WAITING_NAME)
         
         await event.delete()
@@ -42,7 +38,6 @@ def register(bot):
             "لطفاً نام مستعار، نام برند یا اسمی که می‌خواهید روی تمامی استیکرها درج شود را ارسال کنید:"
         )
 
-    # ۳. هندلر دریافت نام و آیدی (متنی)
     @bot.on(events.NewMessage)
     async def collect_text_info(event):
         if event.text.startswith('/') or event.text in ["🎨 ساخت استیکر", "📂 استیکرهای ساخته شده", "📞 پشتیبانی", "❓ راهنما", "🛡 پنل مدیریت"]:
@@ -50,7 +45,6 @@ def register(bot):
 
         state = await get_state(event.sender_id)
         
-        # دریافت نام
         if state == UserState.WAITING_NAME:
             sticker_name = event.text
             await update_order(event.sender_id, {"sticker_name": sticker_name})
@@ -61,7 +55,6 @@ def register(bot):
                 "حالا آیدی تلگرام یا اینستاگرام خود را جهت درج در استیکر به صورت `@ID` ارسال کنید:"
             )
 
-        # دریافت آیدی
         elif state == UserState.WAITING_ID_STENCIL:
             if not event.text.startswith("@"):
                 await event.respond("⚠️ لطفا آیدی را حتماً با @ شروع کنید (مثال: @YourID):")
@@ -71,7 +64,6 @@ def register(bot):
             await update_order(event.sender_id, {"sticker_id": sticker_id})
             await set_state(event.sender_id, UserState.WAITING_RECEIPT)
             
-            # نمایش مرحله پرداخت
             from database.order_repo import get_active_order
             order = await get_active_order(event.sender_id)
             products = await get_products()

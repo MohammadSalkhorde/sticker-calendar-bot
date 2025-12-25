@@ -10,7 +10,6 @@ from config import ADMIN_ID
 
 def register(bot, sticker_client): 
 
-    # --- ۱. ورود به پنل (هم با دستور و هم با دکمه متنی) ---
     @bot.on(events.NewMessage(from_users=ADMIN_ID))
     async def admin_entry(event):
         if event.text in ['/admin', '🛡 پنل مدیریت']:
@@ -23,19 +22,16 @@ def register(bot, sticker_client):
             ]
             await event.respond("🛡 **به پنل مدیریت خوش آمدید**\nلطفاً یکی از بخش‌های زیر را انتخاب کنید:", buttons=buttons)
 
-    # --- ۲. مدیریت کلیک‌های دکمه‌های شیشه‌ای پنل ادمین ---
     @bot.on(events.CallbackQuery)
     async def admin_callback(event):
         if event.sender_id != ADMIN_ID: return
         data = event.data.decode()
         
-        # پاسخ سریع برای جلوگیری از ارور QueryIdInvalidError
         try:
             await event.answer()
         except:
             pass
 
-        # بخش آمار
         if data == "admin_stats":
             orders = await get_recent_orders(10)
             if not orders:
@@ -47,7 +43,6 @@ def register(bot, sticker_client):
                 msg += f"{idx}. کاربر: {user_info}\n💵 مبلغ: {o.get('amount', 0):,}\n📦 پک: {o.get('pack')}\n➖➖➖➖\n"
             await event.respond(msg)
 
-        # بخش تنظیمات پکیج‌ها
         elif data == "admin_settings":
             products = await get_products()
             msg = "⚙️ **تنظیمات پکیج‌ها:**\n\n"
@@ -61,7 +56,6 @@ def register(bot, sticker_client):
             buttons.append([Button.inline("🔙 بازگشت به منو", data="admin_back")])
             await event.edit(msg, buttons=buttons)
 
-        # بخش تنظیمات کارت بانکی
         elif data == "admin_card_settings":
             card_num, card_name = await get_payment_info()
             msg = f"💳 **تنظیمات حساب بانکی:**\n\nشماره کارت: `{card_num}`\nبنام: **{card_name}**"
@@ -72,7 +66,6 @@ def register(bot, sticker_client):
             ]
             await event.edit(msg, buttons=buttons)
 
-        # دکمه بازگشت
         elif data == "admin_back":
             buttons = [
                 [Button.inline("📊 آمار ۱۰ سفارش اخیر", data="admin_stats")],
@@ -82,7 +75,6 @@ def register(bot, sticker_client):
             ]
             await event.edit("🛡 **پنل مدیریت ربات**", buttons=buttons)
 
-        # شروع ویرایش‌ها
         elif data.startswith("edit_price_"):
             p_id = data.replace("edit_price_", "")
             await set_state(ADMIN_ID, f"WAIT_PRICE_{p_id}")
@@ -105,7 +97,6 @@ def register(bot, sticker_client):
             await set_state(ADMIN_ID, "WAIT_BROADCAST")
             await event.respond("📢 پیامی که می‌خواهید به همه کاربران ارسال شود را بنویسید:")
 
-        # --- بخش حساس: تایید یا رد فیش واریزی ---
         elif data.startswith("confirm_") or data.startswith("cancel_"):
             user_id = int(data.split("_")[1])
             order = await get_active_order(user_id)
@@ -115,7 +106,6 @@ def register(bot, sticker_client):
                 return
 
             if data.startswith("confirm"):
-                # اطلاع رسانی به ادمین که کار شروع شده
                 status_msg = await event.respond("⏳ در حال تولید و آپلود پک استیکر... لطفاً شکیبا باشید.")
                 
                 try:
@@ -126,20 +116,16 @@ def register(bot, sticker_client):
                     assets_path = r"C:\Users\surface laptop\Desktop\python\projects\assets"
                     template_file = os.path.join(assets_path, order["pack"], "img1.png")
                     
-                    # --- بخش اصلاح شده جهت ارسال نام و آیدی به کارخانه استیکر ---
                     images = build_calendar_stickers(
                         template_path=template_file, 
                         sticker_name=order.get("sticker_name", "بدون نام"), 
                         sticker_id=order.get("sticker_id", "@NoID"),
                         pack_type=p_type
                     )
-                    # ---------------------------------------------------------
                     
-                    # ساخت پک در تلگرام
                     short_name = create_sticker_pack(user_id=user_id, pack_name=order["pack"], images=images)
                     sticker_link = f"https://t.me/addstickers/{short_name}"
                     
-                    # --- پیام جذاب نهایی برای کاربر ---
                     success_msg = (
                         "🎊 **هوراااا! استیکرهای اختصاصی شما آماده شد!** 🎊\n\n"
                         f"🎨 پکیج: **{pack_info['name']}**\n"
@@ -151,7 +137,6 @@ def register(bot, sticker_client):
                     )
                     await bot.send_message(user_id, success_msg, link_preview=True)
 
-                    # بروزرسانی دیتابیس
                     user_entity = await bot.get_entity(user_id)
                     username = user_entity.username if user_entity.username else "NoID"
                     
@@ -173,7 +158,6 @@ def register(bot, sticker_client):
                 await bot.send_message(user_id, "❌ متاسفانه فیش واریزی شما توسط مدیریت تایید نشد.\nدر صورت بروز اشتباه با پشتیبانی در ارتباط باشید.")
                 await event.edit("❌ فیش توسط مدیریت رد شد.")
 
-    # --- ۳. هندلر دریافت ورودی‌های متنی ادمین ---
     @bot.on(events.NewMessage(from_users=ADMIN_ID))
     async def handle_admin_messages(event):
         if event.text.startswith('/') or event.text == '🛡 پنل مدیریت': return

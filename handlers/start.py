@@ -1,11 +1,10 @@
 from telethon import events, Button
 from enums import UserState
 from database.user_repo import set_state
-from database.order_repo import get_user_orders # وارد کردن تابع جدید
+from database.order_repo import get_user_orders 
 from config import ADMIN_ID
 
 def register(bot):
-    # هندلر دستور شروع و منوی اصلی
     @bot.on(events.NewMessage(pattern="/start"))
     async def start_handler(event):
         await set_state(event.sender_id, UserState.START)
@@ -16,7 +15,6 @@ def register(bot):
             [Button.text("❓ راهنما")]
         ]
         
-        # نمایش دکمه مدیریت فقط برای شخص ادمین
         if event.sender_id == ADMIN_ID:
             buttons.append([Button.text("🛡 پنل مدیریت")])
 
@@ -28,15 +26,12 @@ def register(bot):
         
         await event.respond(welcome_text, buttons=buttons)
 
-    # --- بخش نمایش استیکرهای ساخته شده (درخواستی شما) ---
     @bot.on(events.NewMessage(pattern="📂 استیکرهای ساخته شده"))
     async def my_stickers_handler(event):
         user_id = event.sender_id
         
-        # دریافت تاریخچه از دیتابیس
         all_orders = await get_user_orders(user_id)
         
-        # فقط سفارش‌هایی که وضعیت DONE (تکمیل شده) دارند
         completed = [o for o in all_orders if o.get('status') == 'DONE']
         
         if not completed:
@@ -59,7 +54,6 @@ def register(bot):
 
         await event.respond(msg, link_preview=False)
 
-    # هندلر دکمه راهنما
     @bot.on(events.NewMessage(pattern="❓ راهنما"))
     async def help_handler(event):
         help_text = (
@@ -71,7 +65,6 @@ def register(bot):
         )
         await event.respond(help_text)
 
-    # هندلر دکمه پشتیبانی
     @bot.on(events.NewMessage(pattern="📞 پشتیبانی"))
     async def support_handler(event):
         await event.respond(
